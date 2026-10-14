@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hello</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 3rem auto;
+        max-width: 40rem;
+        padding: 0 1rem;
+      }
+
+      #message {
+        border: 1px solid #ccc;
+        border-radius: 0.4rem;
+        padding: 1rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p id="message" role="status" aria-live="polite">Waiting for a message...</p>
+    </main>
+
+    <script>
+      const API_URL = window.HELLO_API_URL || "/hello";
+      const messageElement = document.querySelector("#message");
+
+      async function updateMessage() {
+        try {
+          const response = await fetch(API_URL, {
+            headers: { Accept: "application/json" },
+          });
+          if (!response.ok) {
+            throw new Error(`Flask returned HTTP ${response.status}`);
+          }
+
+          const result = await response.json();
+          if (typeof result.message !== "string") {
+            throw new Error("The Flask response did not contain a message string");
+          }
+
+          messageElement.textContent = result.message;
+        } catch (error) {
+          console.error("Could not update the message:", error);
+          messageElement.textContent = "Could not retrieve the message.";
+        } finally {
+          window.setTimeout(updateMessage, 1000);
+        }
+      }
+      updateMessage();
+    </script>
+  </body>
+</html>

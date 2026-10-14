@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package hello;
+
+// Provides read-only access to the latest message received by the ROS bridge.
+service HelloMessageService {
+  // Returns the latest message currently held by the ROS process.
+  rpc GetLatestMessage(GetLatestMessageRequest) returns (GetLatestMessageResponse);
+}
+
+// This request is empty because the server always returns the latest message.
+message GetLatestMessageRequest {}
+
+// Carries the latest text message from the ROS process to its gRPC client.
+message GetLatestMessageResponse {
+  // The text most recently received by the ROS subscriber.
+  string message = 1;
+}
