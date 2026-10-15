@@ -5,12 +5,15 @@ This architecture experiment sends a text message through a ROS 2 publisher, a R
 ```text
 ROS 2 publisher -> ROS 2 subscriber -> Thread-safe in-memory store
                                               ^
-                                              | read
-                                        ROS gRPC server
-                                              ^
-                                        gRPC client
-                                              ^
-Browser <-> Flask HTTP endpoint
+                                              | reads latest message
+                                       ROS 2 process
+                                       (gRPC server)
+                                             ^
+                                             | gRPC request/response
+                                      Flask (gRPC client)
+                                             ^
+                                             | HTTP/JSON
+                                      Browser frontend
 ```
 
 The publisher sends a message once per second. The subscriber stores the latest message in a shared dictionary protected by a lock. Every five seconds, it appends a JSONL record containing the ROS message type and data.
@@ -50,13 +53,14 @@ python -m grpc_tools.protoc \
   proto/hello.proto
 
 cd ros2_ws
-colcon build --symlink-install
-cd ..
+colcon build
 ```
 
 ## Run the application
 
-Open three terminals. In each terminal, run:
+Open three terminals.
+
+### Terminal 1 — ROS 2 publisher
 
 ```bash
 cd ~/ros2-grpc-integration
@@ -64,25 +68,27 @@ source /opt/ros/humble/setup.bash
 source .venv/bin/activate
 source ros2_ws/install/setup.bash
 export ROS_DOMAIN_ID=10
-```
 
-Start one component in each terminal.
-
-### Terminal 1 — ROS 2 publisher
-
-```bash
 python -m hello_ros.publisher
 ```
 
 ### Terminal 2 — ROS 2 subscriber and gRPC server
 
 ```bash
+cd ~/ros2-grpc-integration
+source /opt/ros/humble/setup.bash
+source .venv/bin/activate
+source ros2_ws/install/setup.bash
+export ROS_DOMAIN_ID=10
+
 python -m hello_ros.entry_point
 ```
 
 ### Terminal 3 — Flask backend
 
 ```bash
+cd ~/ros2-grpc-integration
+source .venv/bin/activate
 python -m flask --app flask_app.app run --host 127.0.0.1 --port 5000
 ```
 
@@ -102,13 +108,8 @@ Example response:
 {"message": "Hello 4"}
 ```
 
-The message number varies depending on when the request is made.
-
-Press `Ctrl+C` in each terminal to stop the processes.
-
 ## Configuration and logging
 
 - The gRPC server listens on `127.0.0.1:50051`.
 - Telemetry is appended to `messages.jsonl` in the bridge process's working directory, assuming a relative history path is configured.
 - File errors are logged without stopping the subscriber.
-- All three terminals use `ROS_DOMAIN_ID=10` so the ROS nodes can discover one another.
